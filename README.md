@@ -45,10 +45,15 @@ Installation: Simply save the code as an .html file (e.g., dashboard.html) and o
 Select a Data Source:
 
 Favorites: Quick access to common feeds (MEVO, Vilnius, Paris, NYC).
+
 Gouv.fr Transport Data: A hardcoded section containing direct links extracted from the French transport portal.
+
 Global Database: Imports the official MobilityData systems list via GitHub.
+
 URL & Proxy: Paste any direct JSON link. Use a CORS proxy (like corsproxy.io) if the feed blocks browser requests.
+
 Load Data: Click "Load" on a list item to fill the URL field, then click "Download Data".
+
 Visualization: The dashboard will parse the JSON, drop markers on the map (color-coded by battery level if available), and populate the stats bar.
 
 
