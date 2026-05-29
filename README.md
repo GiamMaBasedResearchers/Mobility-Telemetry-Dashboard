@@ -24,6 +24,10 @@ https://www.w3schools.com/html/tryit.asp?filename=tryhtml_default
 A lightweight, single-file HTML web-based dashboard designed for visualizing, extracting, and performing OSINT (Open Source Intelligence) analysis on mobility data feeds. This tool supports the GBFS (General Bikeshare Feed Specification) standard and is capable of mapping raw telemetry data, including uORB/MAVlink structures.
 
 
+<img width="1918" height="923" alt="image" src="https://github.com/user-attachments/assets/5d0dac53-487b-43eb-9496-b6d89f322fe1" />
+
+
+
 🚀 Features
 
 Interactive Map Visualization: Real-time mapping of stations, vehicles, and telemetry using Leaflet.js.
