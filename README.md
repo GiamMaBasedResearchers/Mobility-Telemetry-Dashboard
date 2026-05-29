@@ -1,4 +1,26 @@
 Mobility Telemetry Dashboard - Visualizer & OSINT
+
+Obviously, there will be several fixes to be made, and the code isn't clean, and you will find entities that appear to be false positives but are not always false positives. I consider the exercise very interesting for various levels of understanding, knowledge and technicalities.
+
+As always, you can use the plain HTML locally 👋👋👋
+
+To preview GitHub HTML files, use these services by pasting the links:
+
+https://raw.githack.com/ (Tested / working)
+
+Fast Link:
+
+- https://raw.githack.com/GiamMaBasedResearchers/Mobility-Telemetry-Dashboard/main/Mobility%20Telemetry%20Dashboard.html
+
+Thanks to:
+
+https://github.com/neoascetic/rawgithack
+
+You can also use W3Schools Tryit Editor:
+
+https://www.w3schools.com/html/tryit.asp?filename=tryhtml_default
+
+
 A lightweight, single-file HTML web-based dashboard designed for visualizing, extracting, and performing OSINT (Open Source Intelligence) analysis on mobility data feeds. This tool supports the GBFS (General Bikeshare Feed Specification) standard and is capable of mapping raw telemetry data, including uORB/MAVlink structures.
 
 
