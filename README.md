@@ -85,9 +85,9 @@ Madrid (Spain): https://madrid.publicbikesystem.net/customer/gbfs/v2/gbfs.json
 ⚙️ Technical Specifications & Validation
 
 Standard: GBFS (General Bikeshare Feed Specification).
-Validator: To validate the structure of feeds used in this tool, refer to the official validator: github.com/MobilityData/gbfs-validator.
+Validator: To validate the structure of feeds used in this tool, refer to the official validator: https://github.com/MobilityData/gbfs-validator.
 Telemetry Support (uORB/MAVlink): Beyond standard GBFS, the dashboard includes logic to map raw telemetry objects. It recognizes coordinate fields often found in drone/UAV protocols like uORB and MAVlink, specifically handling VehicleStatus messages:
-Reference: docs.px4.io/main/en/msg_docs/VehicleStatus
+Reference: https://docs.px4.io/main/en/msg_docs/VehicleStatus
 
 
 ⚠️ Disclaimer
