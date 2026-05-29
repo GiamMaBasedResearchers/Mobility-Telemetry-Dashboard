@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobility Telemetry Dashboard - Visualizer, Extractor & OSINT</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    
+    <style>
+        :root {
+            --bg-dark: #1e1e2f;
+            --bg-panel: #27293d;
+            --primary: #e14eca;
+            --secondary: #00f2c3;
+            --text-main: #ffffff;
+            --text-muted: #9a9a9a;
+            --border: #2b3553;
+            --danger: #ff4d4d;
+            --success: #2ecc71;
+            --warning: #f1c40f;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            flex-direction: row;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Sidebar */
+        aside {
+            width: 480px;
+            background-color: var(--bg-panel);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            z-index: 1000;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+            flex-shrink: 0;
+            height: 100%;
+        }
+
+        .sidebar-header {
+            padding: 15px;
+            background: linear-gradient(135deg, #1e1e2f 0%, #2b3553 100%);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .sidebar-header h1 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-main);
+            line-height: 1.4;
+        }
+        
+        .sidebar-header p {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 5px;
+        }
+
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        /* Sections */
+        .section {
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 15px;
+        }
+
+        .section h3 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--secondary);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* Controls */
+        .control-row {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 8px;
+        }
+
+        select, input, textarea {
+            background: #1b1b26;
+            border: 1px solid var(--border);
+            color: white;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-family: monospace;
+        }
+        
+        textarea {
+            width: 100%;
+            height: 100px;
+            resize: vertical;
+        }
+
+        select { flex: 1; }
+        input[type="text"] { flex: 2; }
+
+        button {
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+            width: 100%;
+            padding: 10px;
+        }
+        .btn-primary:hover { opacity: 0.9; }
+
+        .btn-secondary {
+            background-color: #444;
+            color: white;
+            flex: 1;
+        }
+        .btn-secondary:hover { background-color: #555; }
+
+        .btn-sm {
+            padding: 4px 8px;
+            font-size: 0.7rem;
+            background: var(--secondary);
+            color: #000;
+        }
+
+        .btn-global {
+            background: linear-gradient(45deg, #e14eca, #00f2c3);
+            color: #000;
+            width: 100%;
+            justify-content: center;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .btn-map {
+            background: #444;
+            color: #fff;
+            width: 100%;
+            margin-bottom: 5px;
+            border: 1px solid var(--border);
+        }
+        .btn-map:hover { background: #555; }
+
+        /* Dynamic Lists */
+        .dynamic-list {
+            list-style: none;
+            margin-top: 10px;
+        }
+
+        .dynamic-item {
+            background: rgba(255,255,255,0.05);
+            padding: 8px;
+            margin-bottom: 5px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 3px solid var(--border);
+        }
+
+        .dynamic-item:hover {
+            background: rgba(255,255,255,0.1);
+            border-left: 3px solid var(--secondary);
+        }
+
+        .item-name { flex: 1; padding-right: 10px; word-break: break-all; }
+        .item-action { 
+            cursor: pointer; 
+            color: var(--secondary); 
+            font-weight: bold; 
+            white-space: nowrap; 
+            background: rgba(0, 242, 195, 0.1);
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+        .item-action:hover { background: var(--secondary); color: #000; }
+
+        .item-action.error { color: var(--danger); background: rgba(255, 77, 77, 0.1); }
+        .item-action.loading { opacity: 0.5; cursor: wait; }
+        .item-action.merging { color: var(--warning); background: rgba(241, 196, 15, 0.1); }
+
+        /* Main Content */
+        main {
+            flex: 1;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            background: #181818;
+            flex: 1;
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-panel);
+            padding: 8px 20px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            display: flex;
+            gap: 20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            z-index: 1000;
+            font-size: 0.85rem;
+        }
+        .stat-val { color: var(--secondary); font-weight: bold; }
+
+        /* Metadata Inspector Panel */
+        .meta-panel {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            width: 380px;
+            max-height: 400px;
+            background: rgba(30, 30, 47, 0.95);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+        
+        .panel-header {
+            padding: 10px 15px;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.85rem;
+            background: rgba(0,0,0,0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: var(--secondary);
+            font-weight: 600;
+            gap: 10px;
+        }
+
+        .panel-title {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .panel-body {
+            padding: 15px;
+            overflow-y: auto;
+            font-size: 0.8rem;
+            color: #ddd;
+            flex: 1;
+        }
+
+        /* Raw JSON Style */
+        pre.raw-json {
+            color: var(--secondary);
+            white-space: pre-wrap;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 0.75rem;
+            margin: 0;
+            background: rgba(0,0,0,0.2);
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px dashed var(--border);
+        }
+
+        /* Metadata Styling */
+        .meta-row {
+            margin-bottom: 8px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding-bottom: 4px;
+        }
+        .meta-key {
+            font-weight: bold;
+            color: var(--secondary);
+            display: block;
+            margin-bottom: 2px;
+            font-size: 0.75rem;
+        }
+        .meta-val {
+            color: var(--text-main);
+            word-break: break-word;
+            line-height: 1.4;
+            font-size: 0.8rem;
+        }
+        .meta-nested {
+            margin-left: 15px;
+            padding-left: 10px;
+            border-left: 2px solid var(--border);
+            margin-top: 5px;
+        }
+        .empty-state {
+            color: var(--text-muted);
+            font-style: italic;
+            text-align: center;
+            padding: 20px;
+        }
+
+        /* Footer Attribution */
+        footer {
+            position: fixed; 
+            bottom: 0;
+            left: 0; 
+            width: 100%; 
+            padding: 10px 20px;
+            background: rgba(30, 30, 47, 0.9);
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border);
+            z-index: 1500;
+            text-align: right;
+            pointer-events: none;
+        }
+        footer a {
+            color: var(--secondary);
+            text-decoration: none;
+            font-weight: bold;
+            pointer-events: auto;
+        }
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--bg-panel);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 4px;
+            border-left: 4px solid var(--primary);
+            z-index: 3000;
+            transform: translateX(120%);
+            transition: transform 0.3s;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            max-width: 300px;
+            font-size: 0.8rem;
+        }
+        .toast.show { transform: translateX(0); }
+        .toast.error { border-left-color: var(--danger); }
+        .toast.success { border-left-color: var(--success); }
+        .toast.info { border-left-color: var(--warning); }
+
+        .loader {
+            border: 2px solid rgba(255,255,255,0.1);
+            border-left-color: #fff;
+            border-radius: 50%;
+            width: 12px;
+            height: 12px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        
+        /* MODAL for MobilityData List */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 2000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(5px);
+        }
+        .modal-content {
+            background: var(--bg-panel);
+            width: 90%;
+            height: 90%;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .modal-header {
+            padding: 15px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0,0,0,0.2);
+        }
+        .modal-body {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+            position: relative;
+        }
+        .airtable-frame {
+            flex: 1;
+            border: none;
+            background: #fff;
+            width: 100%;
+        }
+        .close-modal {
+            background: var(--danger);
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        /* Mobile adjustment */
+        @media (max-width: 900px) {
+            body { flex-direction: column; overflow: auto; }
+            aside { width: 100%; height: auto; max-height: 40vh; }
+            main { height: 60vh; width: 100%; }
+            .meta-panel { width: 300px; bottom: 50px; }
+        }
+    </style>
+</head>
+<body>
+
+<aside>
+    <div class="sidebar-header">
+        <h1>Mobility Telemetry Dashboard</h1>
+        <p>Visualizer, Extractor & OSINT</p>
+    </div>
+
+    <div class="sidebar-content">
+
+        <!-- 1. Telemetry Sample -->
+        <div class="section" style="border-left: 3px solid var(--primary);">
+            <h3>📡 Live Telemetry Sample</h3>
+            <p style="font-size:0.7rem; color:var(--text-muted); margin-bottom:5px;">
+                Visualize real-time station/bike snapshots.
+            </p>
+            <ul class="dynamic-list">
+                <li class="dynamic-item">
+                    <span class="item-name">NYC CitiBike (Stations)</span>
+                    <span class="item-action" onclick="setUrl('https://gbfs.citibikenyc.com/gbfs/en/station_information.json')">Load</span>
+                </li>
+            </ul>
+        </div>
+
+        <!-- 2. Global Database Import -->
+        <div class="section">
+            <h3>🌍 Global Database</h3>
+            <p style="font-size:0.7rem; color:var(--text-muted); margin-bottom:5px;">
+                Import official list from MobilityData GitHub.
+            </p>
+            <button class="btn-global" onclick="importGlobalDatabase()" id="btnImport">
+                🚀 Import Global Database
+            </button>
+            <div id="globalListContainer" style="display:none;">
+                <input type="text" id="globalFilter" placeholder="Filter cities..." onkeyup="filterGlobalList()" style="width:100%; margin-top:10px; margin-bottom:5px;">
+                <ul class="dynamic-list" id="globalList" style="max-height: 200px; overflow-y: auto;"></ul>
+            </div>
+        </div>
+
+        <!-- 2.5 Gouv.fr HARDCODED LIST -->
+        <div class="section">
+            <h3>🇫🇷 Gouv.fr Transport Data</h3>
+            <p style="font-size:0.7rem; color:var(--text-muted); margin-bottom:5px;">
+                Deep link example from transport.data.gouv.fr.
+            </p>
+            <div id="gouvListContainer">
+                <input type="text" id="gouvFilter" placeholder="Filter cities..." onkeyup="filterGouvList()" style="width:100%; margin-bottom:5px;">
+                <ul class="dynamic-list" id="gouvList" style="max-height: 250px; overflow-y: auto;"></ul>
+            </div>
+        </div>
+
+        <!-- 3. MobilityData Members (Iframe) -->
+        <div class="section">
+            <h3>🗺️ MobilityData Members</h3>
+            <p style="font-size:0.7rem; color:var(--text-muted); margin-bottom:5px;">
+                View official operator members list.
+            </p>
+            <button class="btn-map" onclick="openMembersModal()">
+                📋 Open MobilityData Members
+            </button>
+        </div>
+
+        <!-- 4. Smart Extractor -->
+        <div class="section">
+            <h3>🤖 Smart Extractor</h3>
+            <div class="control-row">
+                <input type="text" id="extractInput" placeholder="api.city.com">
+                <button class="btn-sm" onclick="smartExtract()">Try</button>
+            </div>
+        </div>
+
+        <!-- 5. URL & Proxy -->
+        <div class="section">
+            <h3>🔗 URL & Proxy</h3>
+            <div class="control-row">
+                <!-- Manual Proxy Input -->
+                <input type="text" id="proxyInput" placeholder="Proxy Prefix (e.g. https://corsproxy.io/?)" style="flex:1">
+                <button class="btn-sm" onclick="openRawExternal()">🔗 Open Raw</button>
+            </div>
+            <div class="control-row">
+                <input type="text" id="urlInput" placeholder="Paste JSON URL here...">
+            </div>
+            <div class="control-row">
+                <button class="btn-primary" onclick="fetchData()" id="fetchBtn">
+                    <span class="loader" id="btnLoader" style="display:none"></span> Download Data
+                </button>
+                <button class="btn-secondary" onclick="clearMap()">Clear</button>
+            </div>
+            <div style="font-size:0.7rem; color:var(--danger); display:none;" id="errorMsg">
+                ⚠️ Download Failed.
+            </div>
+        </div>
+
+        <!-- 6. Manual Paste -->
+        <div class="section" style="border-left: 3px solid var(--secondary);">
+            <h3>📋 Manual Paste</h3>
+            <textarea id="pasteArea" placeholder='Paste raw JSON here...'></textarea>
+            <button class="btn-secondary" style="width:100%; margin-top:5px;" onclick="processPaste()">Parse</button>
+        </div>
+
+        <!-- 7. Discovered Feeds -->
+        <div class="section" id="discoverySection" style="display:none;">
+            <h3>
+                <span>🔍 Discovered Feeds</span>
+            </h3>
+            <p style="font-size:0.7rem; color:var(--warning); margin-bottom:5px;">
+                💡 Auto-Merge Active.
+            </p>
+            <ul class="dynamic-list" id="feedsList"></ul>
+        </div>
+
+        <!-- 8. Favorites -->
+        <div class="section">
+            <h3>⭐ Favorites</h3>
+            <ul class="dynamic-list">
+                <li class="dynamic-item">
+                    <span class="item-name">MEVO (Poland)</span>
+                    <span class="item-action" onclick="setUrl('https://gbfs.urbansharing.com/rowermevo.pl/gbfs.json')">Load</span>
+                </li>
+                <li class="dynamic-item">
+                    <span class="item-name">Vilnius (Lithuania)</span>
+                    <span class="item-action" onclick="setUrl('https://api.cyclocity.fr/contracts/vilnius/gbfs/v3/gbfs.json')">Load</span>
+                </li>
+                <li class="dynamic-item">
+                    <span class="item-name">Paris (France)</span>
+                    <span class="item-action" onclick="setUrl('https://velib-metropole-opendata.smoove.pro/opendata/Velib_Metropole/gbfs.json')">Load</span>
+                </li>
+                <li class="dynamic-item">
+                    <span class="item-name">NYC (USA)</span>
+                    <span class="item-action" onclick="setUrl('https://gbfs.citibikenyc.com/gbfs/gbfs.json')">Load</span>
+                </li>
+            </ul>
+        </div>
+
+    </div>
+</aside>
+
+<main>
+    <div class="stats-bar">
+        <span>Items: <b class="stat-val" id="statCount">0</b></span>
+        <span>Type: <b class="stat-val" id="statType">-</b></span>
+        <span>Battery: <b class="stat-val" id="statBattery">-</b></span>
+    </div>
+    <div id="map"></div>
+    
+    <div class="meta-panel">
+        <div class="panel-header">
+            <div class="panel-title">📋 Complete Metadata Inspector</div>
+            <button id="btnViewRaw" class="btn-sm" onclick="toggleRawJson()">🔎 View Raw Snippet</button>
+        </div>
+        <div class="panel-body" id="metadataContent">
+            <div class="empty-state">Select a point on the map to view details.</div>
+        </div>
+    </div>
+</main>
+
+<!-- Footer Attribution -->
+<footer>
+    This code is provided by: "GiamMa-based researchers SDR R&D IoT" | 
+    <a href="https://x.com/giammaiot2" target="_blank">@GiammaIoT2</a>
+</footer>
+
+<!-- Members Modal (MOBILITYDATA) -->
+<div class="modal-overlay" id="membersModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>🗺️ MobilityData Members</h3>
+            <button class="close-modal" onclick="closeMembersModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <iframe src="https://mobilitydata.org/members/" class="airtable-frame" referrerpolicy="no-referrer" title="MobilityData Members"></iframe>
+        </div>
+    </div>
+</div>
+
+<div id="toast" class="toast">Message</div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+<script>
+    // --- 1. Setup & State ---
+    const map = L.map('map', { zoomControl: false }).setView([48.8566, 2.3522], 13);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
+    L.control.zoom({ position: 'topright' }).addTo(map);
+    let markersLayer = L.layerGroup().addTo(map);
+    let currentDiscoveryFeeds = [];
+    let globalDatabase = [];
+    
+    // Hardcoded Gouv Links List
+    const gouvDatabase = [
+        "https://gbfs.partners.fifteen.eu/gbfs/velo-fluo/gbfs.json",
+        "https://bdx.mecatran.com/utw/ws/gbfs/bordeaux/v3/gbfs.json?apiKey=opendata-bordeaux-metropole-flux-gtfs-rt",
+        "https://api.cyclocity.fr/contracts/toulouse/gbfs/gbfs.json",
+        "https://api.cyclocity.fr/contracts/nantes/gbfs/gbfs.json",
+        "https://api.cyclocity.fr/contracts/nantes/gbfs/v3/gbfs.json",
+        "https://backend.citiz.fr/public/provider/4/gbfs/v3.0/gbfs.json",
+        "https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_ae/gbfs.json",
+        "https://api.saint-etienne-metropole.fr/velivert/api/gbfs/gbfs.json",
+        "https://backend.citiz.fr/public/provider/7/gbfs/v3.0/gbfs.json",
+        "https://clermontferrand.publicbikesystem.net/customer/gbfs/v2/",
+        "https://gbfs.partners.fifteen.eu/gbfs/pau/gbfs",
+        "https://api.gbfs.ecovelo.mobi/velyceo/gbfs.json",
+        "https://opendata.agglo-larochelle.fr/sites/default/files/dataset/2dc/df9ac-ca89-4e3f-af7e-5d75f255ee5e/gbfs.json",
+        "https://gbfs.partners.fifteen.eu/gbfs/2.2/pompey/en/system_information.json",
+        "https://gbfs.partners.fifteen.eu/gbfs/2.2/pompey/en/gbfs.json",
+        "https://gbfs.partners.fifteen.eu/gbfs/2.2/pompey/en/vehicle_types.json",
+        "https://gbfs.partners.fifteen.eu/gbfs/2.2/pompey/en/geofencing_zones.json",
+        "https://gbfs.partners.fifteen.eu/gbfs/2.2/pompey/en/system_pricing_plans.json"
+    ].map(url => {
+        // Extract name from URL
+        try {
+            const urlObj = new URL(url);
+            const parts = urlObj.pathname.split('/');
+            const fileName = parts[parts.length - 1].split('?')[0];
+            const contract = parts[2]; // usually the city/contract name
+            let name = fileName || contract || 'Dataset';
+            // Clean up name
+            if (name === 'gbfs.json') name = (contract || 'System') + ' (GBFS)';
+            if (name.includes('.json')) name = name.replace('.json', '');
+            return { title: name.toUpperCase(), url: url };
+        } catch(e) {
+            return { title: 'Unknown Link', url: url };
+        }
+    });
+
+    // Render Hardcoded List on Load
+    renderGouvList(gouvDatabase);
+    
+    let currentSourceUrl = '';
+    let lastSelectedItem = null;
+    let currentRawFileText = '';
+
+    // --- 2. Modal Logic ---
+    function openMembersModal() {
+        document.getElementById('membersModal').style.display = 'flex';
+    }
+    function closeMembersModal() {
+        document.getElementById('membersModal').style.display = 'none';
+    }
+
+    // --- 3. Global Database Import Logic ---
+    async function importGlobalDatabase() {
+        const btn = document.getElementById('btnImport');
+        const originalText = btn.innerText;
+        btn.innerText = 'Downloading Database...';
+        btn.disabled = true;
+
+        try {
+            const response = await fetch('https://raw.githubusercontent.com/MobilityData/gbfs/master/systems.csv');
+            const csvText = await response.text();
+            const lines = csvText.split('\n');
+            const headers = lines[0].split(',');
+            const countryIdx = headers.findIndex(h => h.includes('Country'));
+            const nameIdx = headers.findIndex(h => h.includes('Name'));
+            const urlIdx = headers.findIndex(h => h.includes('Auto-Discovery'));
+
+            if (urlIdx === -1) throw new Error("CSV format changed");
+            globalDatabase = [];
+
+            for (let i = 1; i < Math.min(lines.length, 150); i++) {
+                const cols = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
+                if (cols && cols[urlIdx]) {
+                    const url = cols[urlIdx].replace(/"/g, '');
+                    const country = cols[countryIdx] ? cols[countryIdx].replace(/"/g, '') : 'Unknown';
+                    const name = cols[nameIdx] ? cols[nameIdx].replace(/"/g, '') : 'System';
+                    if (url.startsWith('http')) globalDatabase.push({ country, name, url });
+                }
+            }
+            renderGlobalList(globalDatabase);
+            showToast(`Imported ${globalDatabase.length} systems!`, 'success');
+        } catch (err) {
+            console.error(err);
+            showToast('Failed to import database (CORS/Network)', 'error');
+        } finally {
+            btn.innerText = originalText;
+            btn.disabled = false;
+        }
+    }
+
+    function renderGlobalList(list) {
+        const container = document.getElementById('globalListContainer');
+        const ul = document.getElementById('globalList');
+        container.style.display = 'block';
+        ul.innerHTML = '';
+        list.forEach((item) => {
+            const li = document.createElement('li');
+            li.className = 'dynamic-item';
+            li.innerHTML = `
+                <span class="item-name"><span style="color:var(--text-muted)">[${item.country}]</span> ${item.name}</span>
+                <span class="item-action" onclick="setUrl('${item.url}')">Load</span>
+            `;
+            ul.appendChild(li);
+        });
+    }
+
+    function filterGlobalList() {
+        const term = document.getElementById('globalFilter').value.toLowerCase();
+        const filtered = globalDatabase.filter(item => 
+            item.name.toLowerCase().includes(term) || 
+            item.country.toLowerCase().includes(term)
+        );
+        renderGlobalList(filtered.slice(0, 50));
+    }
+
+    // --- 3.5 Gouv List Logic (Hardcoded) ---
+    function renderGouvList(list) {
+        const container = document.getElementById('gouvListContainer');
+        const ul = document.getElementById('gouvList');
+        container.style.display = 'block';
+        ul.innerHTML = '';
+        
+        // Limit display
+        const displayList = list.slice(0, 150);
+
+        displayList.forEach((item) => {
+            const li = document.createElement('li');
+            li.className = 'dynamic-item';
+            li.innerHTML = `
+                <span class="item-name" title="${item.url}">${item.title}</span>
+                <span class="item-action" onclick="setUrl('${item.url}')">Load</span>
+            `;
+            ul.appendChild(li);
+        });
+    }
+
+    function filterGouvList() {
+        const term = document.getElementById('gouvFilter').value.toLowerCase();
+        const filtered = gouvDatabase.filter(item => 
+            item.title.toLowerCase().includes(term) || 
+            item.url.toLowerCase().includes(term)
+        );
+        renderGouvList(filtered);
+    }
+
+    // --- 4. Helpers ---
+    function showToast(msg, type='info') {
+        const t = document.getElementById('toast');
+        t.innerText = msg;
+        t.className = `toast ${type} show`;
+        setTimeout(() => t.classList.remove('show'), 3000);
+    }
+    function setUrl(url) {
+        document.getElementById('urlInput').value = url;
+        showToast('URL loaded. Click Download.', 'info');
+    }
+    function openRawExternal() {
+        const url = document.getElementById('urlInput').value;
+        if(url) window.open(url, '_blank');
+    }
+    function clearMap() {
+        markersLayer.clearLayers();
+        document.getElementById('statCount').innerText = '0';
+        document.getElementById('discoverySection').style.display = 'none';
+        document.getElementById('feedsList').innerHTML = '';
+        document.getElementById('errorMsg').style.display = 'none';
+        document.getElementById('metadataContent').innerHTML = '<div class="empty-state">Select a point on the map to view details.</div>';
+        document.getElementById('btnViewRaw').innerText = "🔎 View Raw Snippet";
+        currentDiscoveryFeeds = [];
+        currentSourceUrl = '';
+        currentRawFileText = '';
+        lastSelectedItem = null;
+        showToast('Map cleared');
+    }
+
+    // --- 5. Metadata Renderer ---
+    function renderMetadata(item, container, indent = 0) {
+        if (!item) return;
+        if (Array.isArray(item)) {
+            const ul = document.createElement('div');
+            ul.className = 'meta-nested';
+            ul.style.marginLeft = (indent * 15) + 'px';
+            item.forEach(sub => renderMetadata(sub, ul, indent + 1));
+            container.appendChild(ul);
+            return;
+        }
+        if (typeof item === 'object') {
+            for (const key in item) {
+                if (item.hasOwnProperty(key)) {
+                    const val = item[key];
+                    const row = document.createElement('div');
+                    row.className = 'meta-row';
+                    row.style.paddingLeft = (indent * 10) + 'px';
+                    const keySpan = document.createElement('span');
+                    keySpan.className = 'meta-key';
+                    keySpan.innerText = key;
+                    if (typeof val === 'object' && val !== null) {
+                        const valDiv = document.createElement('div');
+                        valDiv.className = 'meta-val';
+                        renderMetadata(val, valDiv, 0); 
+                        row.appendChild(keySpan);
+                        row.appendChild(valDiv);
+                        container.appendChild(row);
+                    } else {
+                        const valSpan = document.createElement('span');
+                        valSpan.className = 'meta-val';
+                        valSpan.innerText = val !== null ? val : 'null';
+                        row.appendChild(keySpan);
+                        row.appendChild(valSpan);
+                        container.appendChild(row);
+                    }
+                }
+            }
+        } else {
+            const row = document.createElement('div');
+            row.className = 'meta-row';
+            row.innerText = item;
+            container.appendChild(row);
+        }
+    }
+
+    // --- 6. Extract Snippet Logic (The Core Request) ---
+    function extractObjectSnippet(item, fullText) {
+        // 1. Identify a unique key to search for
+        const possibleKeys = ['station_id', 'vehicle_id', 'bike_id', 'id', 'short_name'];
+        let searchKey = null;
+        let searchValue = null;
+
+        for (const k of possibleKeys) {
+            if (item[k]) {
+                searchKey = k;
+                searchValue = item[k].toString();
+                break;
+            }
+        }
+
+        if (!searchKey) return null; // Can't search without ID
+
+        // 2. Search for the key-value pair in the raw text
+        // We search for "key": "value"
+        // Note: We need to escape special regex characters in value just in case
+        const escapedValue = searchValue.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        const regex = new RegExp(`"${searchKey}"\\s*:\\s*"${escapedValue}"`);
+        const match = fullText.match(regex);
+
+        if (!match) return null;
+
+        const startIndex = match.index;
+
+        // 3. Walk backwards to find the start of the object {
+        let openBraceIndex = -1;
+        let bracketCount = 0;
+
+        for (let i = startIndex; i >= 0; i--) {
+            const char = fullText[i];
+            if (char === '}') bracketCount++;
+            if (char === '{') {
+                if (bracketCount === 0) {
+                    openBraceIndex = i;
+                    break;
+                }
+                bracketCount--;
+            }
+        }
+
+        if (openBraceIndex === -1) return null;
+
+        // 4. Walk forward to find the end of the object }
+        let closeBraceIndex = openBraceIndex;
+        let openCount = 0;
+
+        for (let i = openBraceIndex; i < fullText.length; i++) {
+            const char = fullText[i];
+            if (char === '{') openCount++;
+            if (char === '}') openCount--;
+            if (openCount === 0) {
+                closeBraceIndex = i + 1;
+                break;
+            }
+        }
+
+        return fullText.substring(openBraceIndex, closeBraceIndex);
+    }
+
+    function toggleRawJson() {
+        const contentDiv = document.getElementById('metadataContent');
+        const btn = document.getElementById('btnViewRaw');
+
+        // If already viewing raw, switch back to parsed
+        if (contentDiv.querySelector('pre.raw-json')) {
+            updateInspector(lastSelectedItem);
+            btn.innerText = "🔎 View Raw Snippet";
+            return;
+        }
+
+        // If no item selected
+        if (!lastSelectedItem) {
+            showToast('Select a point on the map first.', 'warning');
+            return;
+        }
+
+        // Try to extract from original source
+        let snippet = null;
+        if (currentRawFileText) {
+            snippet = extractObjectSnippet(lastSelectedItem, currentRawFileText);
+        }
+
+        if (snippet) {
+            // Success: Show the extracted snippet from original file
+            contentDiv.innerHTML = `<pre class="raw-json">${snippet}</pre>`;
+            btn.innerText = "⬅️ Back to Metadata";
+            showToast('Extracted from original source', 'success');
+        } else {
+            // Fallback: Show local object if extraction failed (e.g. pasted data or weird formatting)
+            try {
+                const localJson = JSON.stringify(lastSelectedItem, null, 2);
+                contentDiv.innerHTML = `<pre class="raw-json">${localJson}</pre>`;
+                btn.innerText = "⬅️ Back to Metadata";
+                showToast('Showing local copy (Source not found)', 'info');
+            } catch (e) {
+                showToast('Error formatting JSON.', 'error');
+            }
+        }
+    }
+
+    // --- 7. Fetch Logic ---
+    async function fetchData(urlOverride = null) {
+        const url = urlOverride || document.getElementById('urlInput').value.trim();
+        const proxyPrefix = document.getElementById('proxyInput').value.trim();
+        
+        if (!url) return showToast('Enter a URL first', 'error');
+        
+        currentSourceUrl = url;
+        document.getElementById('btnLoader').style.display = 'inline-block';
+        document.getElementById('errorMsg').style.display = 'none';
+        
+        let fetchUrl = url;
+        if (proxyPrefix) {
+            fetchUrl = proxyPrefix + encodeURIComponent(url);
+        }
+
+        try {
+            const res = await fetch(fetchUrl);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            
+            // Store Raw Text for extraction
+            currentRawFileText = await res.text();
+            
+            let data;
+            try { data = JSON.parse(currentRawFileText); } catch(e) { throw new Error('Invalid JSON response'); }
+            processJSON(data, url);
+            showToast('Data loaded successfully', 'success');
+        } catch (err) {
+            console.error(err);
+            showToast('Download failed. Try using a Proxy.', 'error');
+            document.getElementById('errorMsg').style.display = 'block';
+            currentRawFileText = ''; // Clear on error
+        } finally {
+            document.getElementById('btnLoader').style.display = 'none';
+        }
+    }
+
+    function processPaste() {
+        const text = document.getElementById('pasteArea').value;
+        if(!text) return showToast('Paste JSON text first', 'error');
+        try {
+            const data = JSON.parse(text);
+            currentSourceUrl = '';
+            currentRawFileText = text; // Store pasted text
+            processJSON(data, 'pasted_data');
+            showToast('Pasted data processed', 'success');
+        } catch(e) { showToast('Invalid JSON format', 'error'); }
+    }
+
+    // --- 8. Smart Extractor ---
+    async function smartExtract() {
+        const domain = document.getElementById('extractInput').value.trim();
+        if (!domain) return showToast('Enter a domain first', 'error');
+        showToast('Trying common patterns...', 'info');
+        
+        let baseUrl = domain.replace(/^https?:\/\//, '').replace(/\/$/, '');
+        if (!baseUrl.startsWith('http')) baseUrl = 'https://' + baseUrl;
+        const patterns = [`${baseUrl}/gbfs.json`, `${baseUrl}/en/gbfs.json`, `${baseUrl}/v3/gbfs.json`];
+        
+        const proxyPrefix = document.getElementById('proxyInput').value.trim();
+
+        for (const url of patterns) {
+            try {
+                let fetchUrl = url;
+                if (proxyPrefix) {
+                    fetchUrl = proxyPrefix + encodeURIComponent(url);
+                }
+                
+                const res = await fetch(fetchUrl);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.data || data.last_updated) { 
+                        setUrl(url); 
+                        fetchData(url); 
+                        return; 
+                    }
+                }
+            } catch (e) { continue; }
+        }
+        showToast('Could not auto-discover feed at this domain.', 'error');
+    }
+
+    // --- 9. Processing & Auto-Merge Logic ---
+    function processJSON(data, sourceUrl) {
+        markersLayer.clearLayers();
+        document.getElementById('metadataContent').innerHTML = '<div class="empty-state">Select a point on the map to view details.</div>';
+        document.getElementById('btnViewRaw').innerText = "🔎 View Raw Snippet";
+        let feeds = null;
+        let langKey = null;
+        if (data.data) {
+            if (Array.isArray(data.data.feeds)) feeds = data.data.feeds;
+            else {
+                const possibleKeys = Object.keys(data.data);
+                langKey = possibleKeys.find(key => data.data[key] && Array.isArray(data.data[key].feeds));
+                if (langKey) feeds = data.data[langKey].feeds;
+            }
+        }
+        if (feeds && Array.isArray(feeds)) {
+            currentDiscoveryFeeds = feeds; 
+            renderFeedsList(feeds);
+            showToast(`Discovery file found. Auto-Merge ready.`, 'success');
+            return; 
+        }
+        mapData(data);
+    }
+
+    function renderFeedsList(feeds) {
+        document.getElementById('discoverySection').style.display = 'block';
+        const list = document.getElementById('feedsList');
+        list.innerHTML = '';
+        feeds.forEach((feed, index) => {
+            const li = document.createElement('li');
+            li.className = 'dynamic-item';
+            li.innerHTML = `
+                <span class="item-name" id="feed-name-${index}">${feed.name}</span>
+                <span class="item-action" id="feed-btn-${index}" onclick="loadAndMerge('${feed.url}', ${index}, '${feed.name}')">Load</span>
+            `;
+            list.appendChild(li);
+        });
+    }
+
+    // --- 10. THE MAGIC: Load & Merge ---
+    async function loadAndMerge(url, index, name) {
+        const btn = document.getElementById(`feed-btn-${index}`);
+        const originalText = btn.innerText;
+        btn.innerText = '...';
+        btn.classList.add('loading');
+        btn.classList.remove('error');
+        try {
+            currentSourceUrl = url;
+
+            let primaryData = await fetchJson(url);
+            // Update raw text to the primary feed loaded
+            currentRawFileText = primaryData._rawText || ""; 
+
+            let mergeTargetUrl = null;
+            if (name.includes('station_status')) {
+                const infoFeed = currentDiscoveryFeeds.find(f => f.name.includes('station_information'));
+                if (infoFeed) mergeTargetUrl = infoFeed.url;
+            } else if (name.includes('free_bike_status')) {
+                const typeFeed = currentDiscoveryFeeds.find(f => f.name.includes('vehicle_types'));
+                if (typeFeed) mergeTargetUrl = typeFeed.url;
+            }
+            let secondaryData = null;
+            if (mergeTargetUrl) {
+                btn.innerText = 'Merging...';
+                btn.classList.remove('loading');
+                btn.classList.add('merging');
+                try { secondaryData = await fetchJson(mergeTargetUrl); showToast('Data Merged Successfully', 'success'); }
+                catch(e) { console.warn("Merge failed, using primary only", e); }
+            }
+            const finalData = mergeData(primaryData, secondaryData, name);
+            mapData(finalData);
+            btn.innerText = '✔';
+            btn.classList.remove('loading', 'merging');
+        } catch (err) {
+            btn.innerText = 'ERR';
+            btn.classList.remove('loading', 'merging');
+            btn.classList.add('error');
+            showToast(`Failed to load feed.`, 'error');
+        }
+    }
+
+    async function fetchJson(url) {
+        const proxyPrefix = document.getElementById('proxyInput').value.trim();
+        let fetchUrl = url;
+        if (proxyPrefix) {
+            fetchUrl = proxyPrefix + encodeURIComponent(url);
+        }
+        const res = await fetch(fetchUrl);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const text = await res.text();
+        const data = JSON.parse(text);
+        data._rawText = text; // Attach raw text to data object temporarily
+        return data;
+    }
+
+    function mergeData(primary, secondary, name) {
+        if (!secondary || !secondary.data) return primary;
+        const primaryItems = primary.data.stations || primary.data.bikes || primary.data.vehicles || [];
+        const secondaryItems = secondary.data.stations || secondary.data.vehicle_types || [];
+        if (name.includes('station_status')) {
+            const infoMap = {};
+            secondaryItems.forEach(item => { if (item.station_id) infoMap[item.station_id] = item; });
+            primaryItems.forEach(item => {
+                const match = infoMap[item.station_id];
+                if (match) { for (const key in match) { if (!item[key]) item[key] = match[key]; } }
+            });
+        }
+        if (name.includes('free_bike_status') && secondaryItems.length > 0) {
+             const typeMap = {};
+             secondaryItems.forEach(t => { if (t.vehicle_type_id) typeMap[t.vehicle_type_id] = t; });
+             primaryItems.forEach(item => {
+                 const match = typeMap[item.vehicle_type_id];
+                 if (match) { item._vehicle_type_details = match; }
+             });
+        }
+        return primary;
+    }
+
+    // --- 11. Mapping Logic ---
+    function mapData(data) {
+        let items = [];
+        let type = "Unknown";
+        if (data.data) {
+            items = items.concat(data.data.stations || []);
+            items = items.concat(data.data.bikes || []);
+            items = items.concat(data.data.vehicles || []);
+            if (data.data.bikes) items = data.data.bikes; 
+        }
+        if (data.type === "FeatureCollection") {
+            items = data.features;
+            type = "GeoJSON";
+        } else if (Array.isArray(data)) {
+            items = data;
+            type = "Array";
+        } else if (items.length > 0) {
+            type = "Merged GBFS Data";
+        } else if (typeof data === 'object') {
+            items = [data];
+            type = "UORB Snapshot";
+        }
+
+        if (items.length === 0) {
+            showToast('No mappable items found in this JSON', 'info');
+            document.getElementById('statType').innerText = type;
+            return;
+        }
+
+        let count = 0;
+        let battTotal = 0;
+        let battCount = 0;
+        const bounds = L.latLngBounds();
+
+        items.forEach(item => {
+            let lat = item.lat || item.latitude;
+            let lon = item.lon || item.lng || item.longitude;
+            
+            if (!lat && item.vehicle_status) {
+                lat = item.vehicle_status.lat_rad * (180/Math.PI);
+                lon = item.vehicle_status.lon_rad * (180/Math.PI);
+            } else if (!lat && item.sensor_gps) {
+                lat = item.sensor_gps.lat_rad * (180/Math.PI);
+                lon = item.sensor_gps.lon_rad * (180/Math.PI);
+            }
+
+            if (!lat && item.geometry && item.geometry.coordinates) {
+                lon = item.geometry.coordinates[0];
+                lat = item.geometry.coordinates[1];
+            }
+
+            if (lat && lon && !isNaN(lat) && !isNaN(lon)) {
+                count++;
+                bounds.extend([lat, lon]);
+
+                let batt = item.battery_level || item.batteryPercentage || item.range;
+                let color = '#e14eca';
+                if (batt) {
+                    batt = parseInt(batt);
+                    if(!isNaN(batt)) {
+                        battTotal += batt;
+                        battCount++;
+                        color = batt > 80 ? '#00f2c3' : (batt > 20 ? '#fd5d93' : '#ff4d4d');
+                    }
+                }
+
+                const marker = L.circleMarker([lat, lon], {
+                    radius: 8,
+                    fillColor: color,
+                    color: '#fff',
+                    weight: 1,
+                    fillOpacity: 0.9
+                });
+
+                let popupContent = `<b>ID:</b> ${item.vehicle_id || item.station_id || item.id || 'Point'}<br>`;
+                if (item.vehicle_status && item.vehicle_status.arming_state) {
+                    popupContent += `<b>Armed:</b> ${item.vehicle_status.arming_state}<br>`;
+                }
+                if (batt) popupContent += `<b>Battery:</b> ${batt}%<br>`;
+                popupContent += `<br><small>Lat: ${lat.toFixed(5)}, Lon: ${lon.toFixed(5)}</small>`;
+
+                marker.bindPopup(popupContent);
+                marker.on('click', () => {
+                    updateInspector(item);
+                });
+
+                markersLayer.addLayer(marker);
+            }
+        });
+
+        map.on('click', (e) => {
+            if (!e.originalEvent.target.closest('.leaflet-marker-icon') && !e.originalEvent.target.closest('.leaflet-interactive')) {
+                document.getElementById('metadataContent').innerHTML = '<div class="empty-state">Select a point on the map to view details.</div>';
+                document.getElementById('btnViewRaw').innerText = "🔎 View Raw Snippet";
+            }
+        });
+
+        if (count > 0) {
+            map.fitBounds(bounds, { padding: [50, 50] });
+            if (count === 1) map.setZoom(16);
+        }
+
+        document.getElementById('statCount').innerText = count;
+        document.getElementById('statType').innerText = type;
+        document.getElementById('statBattery').innerText = battCount ? Math.round(battTotal/battCount) + '%' : '-';
+    }
+
+    // --- 12. Update Inspector ---
+    function updateInspector(item) {
+        lastSelectedItem = item;
+        const container = document.getElementById('metadataContent');
+        container.innerHTML = ''; 
+        const wrapper = document.createElement('div');
+        renderMetadata(item, wrapper);
+        container.appendChild(wrapper);
+        container.scrollTop = 0;
+        
+        // Reset button state when selecting a new item
+        document.getElementById('btnViewRaw').innerText = "🔎 View Raw Snippet";
+    }
+
+</script>
+</body>
+</html>
