@@ -33,9 +33,13 @@ A lightweight, single-file HTML web-based dashboard designed for visualizing, ex
 Interactive Map Visualization: Real-time mapping of stations, vehicles, and telemetry using Leaflet.js.
 
 GBFS JSON Feed Support: Fully compatible with standard GBFS feeds, handling station_information, free_bike_status, and geofencing_zones.
+
 Auto-Merge Logic: Automatically combines status feeds with information feeds to display battery levels and station capacities.
+
 Data Extraction: Includes a curated list of feeds (e.g., from transport.data.gouv.fr) and a manual input for custom URLs.
+
 Metadata Inspector: View raw JSON snippets and detailed metadata for any point on the map.
+
 No Backend Required: Runs entirely client-side (browser-based).
 
 📖 How to Use & How It Works
