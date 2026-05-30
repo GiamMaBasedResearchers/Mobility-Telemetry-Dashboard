@@ -102,6 +102,10 @@ Reference: https://docs.px4.io/main/en/msg_docs/VehicleStatus
 
 Add Mobility Telemetry Dashboard 0.2 "Global Bike Share Networks" Section from https://www.kaggle.com/datasets/ibrahimqasimi/city-bike
 
+Fast Link:
+
+- https://raw.githack.com/GiamMaBasedResearchers/Mobility-Telemetry-Dashboard/main/Mobility%20Telemetry%20Dashboard%200.2.html
+
 ⚠️ Disclaimer
 
 Disclaimer: The code is for educational, training, analysis, & security purposes, & is intended for understanding & knowledge. The authors assume no liability for the misuse of this tool or the data it visualizes. Always ensure you have permission to access and visualize telemetry data.
