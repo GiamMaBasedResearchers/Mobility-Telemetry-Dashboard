@@ -106,6 +106,11 @@ Fast Link:
 
 - https://raw.githack.com/GiamMaBasedResearchers/Mobility-Telemetry-Dashboard/main/Mobility%20Telemetry%20Dashboard%200.2.html
 
+Other useful links:
+
+- https://github.com/MobilityData/gbfs/blob/master/systems.csv
+- https://raw.githubusercontent.com/MobilityData/gbfs/master/systems.csv
+
 ⚠️ Disclaimer
 
 Disclaimer: The code is for educational, training, analysis, & security purposes, & is intended for understanding & knowledge. The authors assume no liability for the misuse of this tool or the data it visualizes. Always ensure you have permission to access and visualize telemetry data.
